@@ -1,47 +1,40 @@
 from flask import Flask, request, jsonify
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import nltk
-from mensajes import generar_respuesta
-from perfil import actualizar_perfil, obtener_perfil
-
-nltk.download('vader_lexicon')
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 app = Flask(__name__)
 analyzer = SentimentIntensityAnalyzer()
-perfil_usuario = []
 
 @app.route("/analizar", methods=["POST"])
 def analizar():
     data = request.get_json()
     texto = data.get("texto", "")
 
-    scores = analyzer.polarity_scores(texto)
-    comp = scores['compound']
+    if not texto:
+        return jsonify({"error": "Texto vacío"}), 400
 
-    if comp >= 0.1:
-        emocion = "POSITIVO"
-    elif comp <= -0.1:
-        emocion = "NEGATIVO"
+    # Análisis de emoción
+    resultado = analyzer.polarity_scores(texto)
+    score = resultado["compound"]
+
+    if score >= 0.3:
+        emocion = "positiva"
+        mensaje = "¡Qué bien que te sientas así!"
+        recomendacion = "Disfruta este momento y continúa haciendo lo que te hace sentir bien."
+    elif score <= -0.3:
+        emocion = "negativa"
+        mensaje = "Parece que estás pasando por un momento difícil."
+        recomendacion = "Habla con alguien de confianza o intenta hacer algo que te relaje."
     else:
-        emocion = "NEUTRAL"
-
-    # Generar recomendación
-    mensaje, recomendacion = generar_respuesta(emocion, texto)
-
-    # Guardar para perfil
-    perfil_usuario.append((texto, emocion))
-    perfil = actualizar_perfil(perfil_usuario)
+        emocion = "neutral"
+        mensaje = "Tus emociones están equilibradas por ahora."
+        recomendacion = "Reflexiona sobre tu día y enfócate en lo que te haga sentir bien."
 
     return jsonify({
         "emocion": emocion,
         "mensaje": mensaje,
         "recomendacion": recomendacion,
-        "perfil_actual": perfil
+        "puntaje": score
     })
-
-@app.route("/perfil", methods=["GET"])
-def perfil():
-    return jsonify(obtener_perfil(perfil_usuario))
 
 if __name__ == "__main__":
     app.run()
