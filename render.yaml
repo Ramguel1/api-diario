@@ -1,9 +1,11 @@
 services:
   - type: web
-    name: diario-ia-api
-    env: python
+    name: api-diario
+    runtime: python
+    buildCommand: ""
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+    region: oregon
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      python -c "import nltk; nltk.download('vader_lexicon')"
-    startCommand: "gunicorn app:app"
